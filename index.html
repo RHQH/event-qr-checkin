@@ -1,80 +1,107 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Event QR Check-In</title>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Rahalatul Quran — Test Links</title>
 <style>
-body{font-family:Arial,sans-serif;max-width:480px;margin:20px auto;padding:16px;color:#202124}
-label{display:block;font-weight:bold;margin:14px 0 6px}select,button{width:100%;box-sizing:border-box;padding:13px;margin:6px 0;font-size:16px;border-radius:8px}select{border:1px solid #aaa;background:#fff}button{border:0;background:#075985;color:#fff;font-weight:bold}button:disabled{opacity:.55}#reader{width:100%;margin-top:12px}#result{padding:16px;border-radius:8px;background:#f1f5f9;margin-top:14px;white-space:pre-line;font-weight:bold;overflow-wrap:anywhere}.ok{background:#dcfce7!important;color:#166534}.bad{background:#fee2e2!important;color:#991b1b}.note{font-size:13px;color:#555;line-height:1.45}
-</style></head>
+  :root { --g:#1f5c4a; --g2:#e8f2ee; --bd:#d5ddd9; --bad:#b3261e; --tx:#16211d; --mut:#6b7a73; --bg:#f4f7f5; --card:#fff; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--tx); }
+  header { background:var(--g); color:#fff; padding:18px 16px; text-align:center; }
+  header h1 { margin:0; font-size:19px; } header p { margin:4px 0 0; font-size:13px; opacity:.85; }
+  main { max-width:560px; margin:0 auto; padding:16px; }
+  .batch { background:var(--card); border:1px solid var(--bd); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .batch h2 { margin:0 0 12px; font-size:16px; color:var(--g); }
+  .btns { display:flex; flex-direction:column; gap:10px; }
+  .btns button { display:flex; align-items:center; justify-content:space-between; width:100%; padding:14px 16px; font-size:16px; font-weight:700;
+                 border:2px solid var(--g); border-radius:10px; background:#fff; color:var(--g); cursor:pointer; text-align:left; }
+  .btns button:hover { background:var(--g2); }
+  .btns button .lk { font-size:15px; opacity:.7; }
+  .btns button.off { border-color:var(--bd); color:var(--mut); cursor:not-allowed; background:#fafbfa; }
+  .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:50; align-items:center; justify-content:center; padding:16px; }
+  .modal.on { display:flex; }
+  .modal > div { background:#fff; border-radius:14px; max-width:400px; width:100%; padding:18px; }
+  .modal h3 { margin:0 0 4px; font-size:17px; } .modal .sub { margin:0 0 12px; font-size:13px; color:var(--mut); }
+  input[type=password], input[type=text] { width:100%; padding:12px; font-size:16px; border:1px solid var(--bd); border-radius:8px; }
+  input:focus { outline:2px solid var(--g); }
+  .chk { display:flex; gap:8px; align-items:center; font-size:13px; color:#44524c; margin:10px 0 0; }
+  .row { display:flex; gap:8px; margin-top:14px; } .row button { flex:1; padding:12px; font-size:15px; font-weight:700; border-radius:10px; cursor:pointer; }
+  .ok { background:var(--g); color:#fff; border:0; } .cancel { background:#fff; color:var(--g); border:2px solid var(--g); }
+  .err { color:var(--bad); font-size:13px; font-weight:700; min-height:18px; margin-top:8px; }
+  footer { text-align:center; font-size:12px; color:var(--mut); padding:4px 16px 24px; }
+  footer button { background:none; border:0; color:var(--mut); text-decoration:underline; cursor:pointer; font-size:12px; }
+</style>
+</head>
 <body>
-<h2>Event QR Check-In</h2>
-<p class="note">Select your name before scanning. Internet and camera access are required.</p>
-<label for="staffName">Staff name</label>
-<select id="staffName" required>
-<option value="">Select your name</option>
-<option value="Staff 1">Staff 1</option>
-<option value="Staff 2">Staff 2</option>
-<option value="Staff 3">Staff 3</option>
-</select>
-<div id="reader"></div>
-<div id="result" role="status" aria-live="polite">Select your name, then tap Start Scanner.</div>
-<button id="start">Start Scanner</button>
-<button id="next" hidden>Scan Next Participant</button>
+<header><h1>Rahalatul Quran</h1><p>Test links — a password is needed for each link</p></header>
+<main id="list"></main>
+<footer><button id="forget">Forget saved passwords on this device</button></footer>
+
+<div class="modal" id="pw"><div>
+  <h3 id="pwTitle"></h3><p class="sub" id="pwSub"></p>
+  <input id="pwIn" type="password" placeholder="Password" autocomplete="off">
+  <label class="chk"><input id="pwKeep" type="checkbox"> Remember on this device</label>
+  <div class="err" id="pwErr"></div>
+  <div class="row"><button class="cancel" id="pwNo">Cancel</button><button class="ok" id="pwYes">Open</button></div>
+</div></div>
+
+<!-- the links, locked with their passwords (made with setup.html) -->
+<script src="links.js"></script>
 <script>
-(() => {
-  // Replace this with the deployed Apps Script Web App URL ending in /exec.
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbwt-LAF9q8OxuL-66yafB7PHpSqYNnQHRKxI1ARG8BPgRs0EyzjnvGTgk5D3sI55iVT6Q/exec";
-  const resultBox = document.getElementById('result');
-  const startBtn = document.getElementById('start');
-  const nextBtn = document.getElementById('next');
-  let scanner = null, running = false, busy = false;
-  function show(message, kind='') { resultBox.textContent=message; resultBox.className=kind; }
-  function makeId() { return crypto.randomUUID(); }
-  function getResult(requestId) {
-    return new Promise(resolve => {
-      let done=false, script=null;
-      const finish = data => { if(done)return; done=true; clearTimeout(timer); if(script)script.remove(); delete window.__eventCheckinCallback; resolve(data); };
-      window.__eventCheckinCallback = data => finish(data);
-      const timer=setTimeout(()=>finish({result:'PENDING'}),2200);
-      try {
-        const u=new URL(GAS_URL); u.searchParams.set('action','result'); u.searchParams.set('requestId',requestId); u.searchParams.set('callback','__eventCheckinCallback'); u.searchParams.set('_',Date.now());
-        script=document.createElement('script'); script.src=u.toString(); script.onerror=()=>finish({result:'NETWORK_ERROR'}); document.body.appendChild(script);
-      } catch(e) { finish({result:'NETWORK_ERROR'}); }
-    });
-  }
-  async function sendScan(token) {
-    const requestId=makeId();
-    const body=new URLSearchParams({action:'checkin',requestId,token,staffName:document.getElementById('staffName').value});
-    // no-cors POST is intentional; result is retrieved through the JSONP endpoint.
-    await fetch(GAS_URL,{method:'POST',mode:'no-cors',body});
-    for(let i=0;i<15;i++) { await new Promise(r=>setTimeout(r,650)); const data=await getResult(requestId); if(data.result && data.result!=='PENDING') return data; }
-    return {result:'TIMEOUT'};
-  }
-  async function onScan(decodedText) {
-    if(busy)return; busy=true; startBtn.disabled=true; nextBtn.hidden=true;
-    try {
-      if(running){await scanner.stop();running=false;}
-      show('Verifying ticket…');
-      const data=await sendScan(decodedText.trim());
-      const status=data.result;
-      if(status==='VALID') show('ENTRY APPROVED\n'+(data.name||'')+'\nRegistration: '+(data.registrationId||'')+'\nStaff: '+(data.staff||document.getElementById('staffName').value)+'\n'+(data.time||''),'ok');
-      else if(status==='ALREADY_USED') show('ALREADY CHECKED IN — DO NOT ADMIT AGAIN\n'+(data.name||'')+'\nRegistration: '+(data.registrationId||'')+'\nPreviously recorded: '+(data.time||''),'bad');
-      else if(status==='INVALID') show('INVALID TICKET — ENTRY NOT ALLOWED','bad');
-      else show('Could not confirm the result ('+status+'). Check the Google Sheet before retrying.','bad');
-    } catch(e) { show('Connection problem. Check the Google Sheet before retrying.','bad'); }
-    startBtn.disabled=false; nextBtn.hidden=false;
-  }
-  async function startScanner() {
-    if(!document.getElementById('staffName').value){show('Please select your name first.','bad');return;}
-    if(!GAS_URL.startsWith('https://script.google.com/')){show('Please set the correct Apps Script /exec URL in index.html.','bad');return;}
-    if(!window.Html5Qrcode){show('Scanner library did not load. Check internet and reload.','bad');return;}
-    startBtn.disabled=true;
-    try { scanner=new Html5Qrcode('reader'); await scanner.start({facingMode:'environment'},{fps:10,qrbox:{width:240,height:240}},onScan,()=>{}); running=true; show('Camera ready. Scan a participant ticket.'); }
-    catch(e){startBtn.disabled=false;show('Camera could not start. Open this GitHub Pages URL in Chrome and allow camera access. '+e,'bad');}
-  }
-  startBtn.addEventListener('click',startScanner);
-  nextBtn.addEventListener('click',async()=>{nextBtn.hidden=true;busy=false;show('Ready for the next participant.');await startScanner();});
-})();
-</script></body></html>
+/* The buttons. The id must be the same as in setup.html. */
+const SECTIONS = [
+  { title: 'Surah Baqarah Batch 4', items: [ { id: 'baq4-weekly', label: 'Weekly Test Link' }, { id: 'baq4-ruba', label: 'Ruba Test Link' } ] },
+  { title: 'Surah Kahaf Batch 3',   items: [ { id: 'kah3-weekly', label: 'Weekly Test Link' }, { id: 'kah3-ruba', label: 'Ruba Test Link' } ] },
+  { title: 'Surah Kahaf Batch 2',   items: [ { id: 'kah2-weekly', label: 'Weekly Test Link' }, { id: 'kah2-ruba', label: 'Ruba Test Link' } ] },
+];
+
+const $ = id => document.getElementById(id);
+const LINKS = window.LINKS || {};
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const save = (k, v) => { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} };
+const read = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+
+async function unlock(box, password) {
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(password.trim()), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(box.s), iterations: box.n || 150000, hash: 'SHA-256' },
+                                            base, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(box.iv) }, key, b64(box.d));
+  return new TextDecoder().decode(plain);          // throws if the password is wrong
+}
+
+$('list').innerHTML = SECTIONS.map(s => `<section class="batch"><h2>${s.title}</h2><div class="btns">` +
+  s.items.map(it => LINKS[it.id]
+    ? `<button data-id="${it.id}" data-label="${it.label}" data-batch="${s.title}"><span>${it.label}</span><span class="lk">🔒</span></button>`
+    : `<button class="off" disabled><span>${it.label}</span><span class="lk">not set yet</span></button>`).join('') +
+  `</div></section>`).join('');
+
+let CUR = null;
+function go(url) { location.href = url; }          // same tab (pop-up blockers stop new tabs opened after the password check)
+$('list').onclick = async e => {
+  const b = e.target.closest('button[data-id]'); if (!b) return;
+  CUR = b.dataset.id;
+  const kept = read('rq_pw_' + CUR);
+  if (kept) { try { return go(await unlock(LINKS[CUR], kept)); } catch (err) { save('rq_pw_' + CUR, null); } }
+  $('pwTitle').textContent = b.dataset.label; $('pwSub').textContent = b.dataset.batch;
+  $('pwIn').value = ''; $('pwErr').textContent = ''; $('pwKeep').checked = false;
+  $('pw').classList.add('on'); $('pwIn').focus();
+};
+async function tryOpen() {
+  const p = $('pwIn').value; if (!p.trim()) { $('pwErr').textContent = 'Type the password.'; return; }
+  $('pwYes').disabled = true;
+  try {
+    const url = await unlock(LINKS[CUR], p);
+    if ($('pwKeep').checked) save('rq_pw_' + CUR, p.trim());
+    $('pw').classList.remove('on'); go(url);
+  } catch (err) { $('pwErr').textContent = 'Wrong password.'; $('pwIn').select(); }
+  finally { $('pwYes').disabled = false; }
+}
+$('pwYes').onclick = tryOpen;
+$('pwIn').onkeydown = e => { if (e.key === 'Enter') tryOpen(); };
+$('pwNo').onclick = () => $('pw').classList.remove('on');
+$('forget').onclick = () => { SECTIONS.forEach(s => s.items.forEach(it => save('rq_pw_' + it.id, null))); alert('Saved passwords removed from this device.'); };
+</script>
+</body>
+</html>
